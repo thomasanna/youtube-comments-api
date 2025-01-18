@@ -14,6 +14,8 @@ class CommentController extends Controller
     public function index($video_id)
     {   
         try{
+            $perPage = request()->get('per_page', 10); // 10 is the default value
+
             $comments = Comment::where('video_id', $video_id)
             ->whereNull('parent_comment_id') // Only get comments that are not replies 
             ->with('user:id,name,email') 
@@ -28,15 +30,25 @@ class CommentController extends Controller
                 
             ])
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate($perPage); // Paginate the results
+
             if ($comments->isEmpty()) {
                 return response()->json(['error' => false, 'message' => 'No comments found for this video'], 404);
             }
 
             $response =[
                 'error'=> false,
-                'data'   => $comments,
-                'message'=> 'success'
+                'data'   => $comments->items(),
+                'message'=> 'success',
+                'pagination' => [
+                    'total' => $comments->total(), // Total number of comments
+                    'per_page' => $comments->perPage(), // Comments per page
+                    'current_page' => $comments->currentPage(), // Current page number
+                    'last_page' => $comments->lastPage(), // Last page number
+                    'next_page_url' => $comments->nextPageUrl(), // URL for next page (if exists)
+                    'prev_page_url' => $comments->previousPageUrl() // URL for previous page (if exists)
+                ]
+
             ];
             return response()->json($response, 200);
         }
@@ -164,6 +176,7 @@ class CommentController extends Controller
     public function listReplies($commentId)
     {
         try {
+            $perPage = request()->get('per_page', 10); // 10 is the default value
             // Fetch replies to the given comment ID
             $replies = Comment::where('parent_comment_id', $commentId)
                             ->with('user:id,name,email') 
@@ -177,7 +190,7 @@ class CommentController extends Controller
                                 'replies as replies_count'
                             ])
                             ->orderByDesc('created_at') 
-                            ->get();                            
+                            ->paginate($perPage); // Paginate the results                           
             
             if ($replies->isEmpty()) {
                 return response()->json([
@@ -189,7 +202,15 @@ class CommentController extends Controller
             return response()->json([
                 'error' => false,
                 'message' => 'Replies fetched successfully.',
-                'data' => $replies,
+                'data' => $replies->items(),
+                'pagination' => [
+                    'total' => $replies->total(),
+                    'per_page' => $replies->perPage(), 
+                    'current_page' => $replies->currentPage(), 
+                    'last_page' => $replies->lastPage(),
+                    'next_page_url' => $replies->nextPageUrl(), 
+                    'prev_page_url' => $replies->previousPageUrl() 
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -275,6 +296,7 @@ class CommentController extends Controller
     public function topComments($videoId)
     {
         try {
+            $perPage = request()->get('per_page', 10); // 10 is the default value
             $topComments = Comment::where('video_id', $videoId)
                 ->whereNull('parent_comment_id') // Only get comments that are not replies 
                 ->with('user:id,name,email') 
@@ -290,7 +312,7 @@ class CommentController extends Controller
                 ->orderByDesc('likes_count') // orders the comments by the number of likes, with the most liked comments first.
                 ->orderByDesc('replies_count') // Order by the number of replies in descending order
                 ->orderByDesc('created_at') 
-                ->get();
+                ->paginate($perPage); // Paginate the results
 
             if ($topComments->isEmpty()) {
                 return response()->json([
@@ -302,7 +324,15 @@ class CommentController extends Controller
             return response()->json([
                 'error' => false,
                 'message' => 'Top comments fetched successfully.',
-                'data' => $topComments,
+                'data' => $topComments->items(),
+                'pagination' => [
+                    'total' => $topComments->total(), 
+                    'per_page' => $topComments->perPage(), 
+                    'current_page' => $topComments->currentPage(), 
+                    'last_page' => $topComments->lastPage(), 
+                    'next_page_url' => $topComments->nextPageUrl(), 
+                    'prev_page_url' => $topComments->previousPageUrl() 
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([

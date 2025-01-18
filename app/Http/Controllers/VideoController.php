@@ -16,15 +16,23 @@ class VideoController extends Controller
     public function index()
     {  
         try{
-            // check if videos cached or not
-            $videos = cache::remember('videos',3600, function(){
-                return Video::all();
-            });
+            
+            $perPage = request()->get('per_page', 10); // 10 is the default value
+            $videos  = Video::orderByDesc('created_at')->paginate($perPage);
 
             if ($videos->isNotEmpty()) {
                 $response =['error'=> false,
-                       'data' => $videos,
-                       'message'=> 'success'];
+                        'data' => $videos->items(),
+                        'message'=> 'success',
+                        'pagination' => [
+                            'total' => $videos->total(), 
+                            'per_page' => $videos->perPage(), 
+                            'current_page' => $videos->currentPage(), 
+                            'last_page' => $videos->lastPage(), 
+                            'next_page_url' => $videos->nextPageUrl(), 
+                            'prev_page_url' => $videos->previousPageUrl() 
+                            ]
+                        ];
                 return response()->json($response, 200);
             }
             $response =[
